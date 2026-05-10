@@ -1,0 +1,36 @@
+crewai==0.11.2
+crewai-tools
+langchain_groq
+langchain_community
+python-dotenv
+requests
+fastapi
+uvicorn
+pydantic
+rich
+chromadb
+playwright
+numpy>=1.24.0
+jinja2
+aiofiles
+
+# Real-time APIs
+amadeus
+pyowm
+googlemaps
+redis
+celery
+websockets
+
+# Enhanced NLP
+spacy
+transformers
+sentence-transformers
+
+# Database & Memory
+supabase
+sqlalchemy
+alembic
+
+# Real-time Features
+aiohttp
