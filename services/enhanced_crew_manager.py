@@ -4,12 +4,10 @@ import asyncio
 from typing import Dict, Any, List
 from datetime import datetime, timedelta
 import random
-from services.api_driven_crew_manager import APIDrivenTravelCrewManager
 
 class EnhancedTravelCrewManager:
     def __init__(self):
         logger.info("Initializing Enhanced Travel Crew Manager with real-time data capabilities")
-        self.api_manager = APIDrivenTravelCrewManager()
         
     def run_crew(self, inputs: dict) -> Dict[str, Any]:
         """Enhanced crew execution with real-time data simulation"""

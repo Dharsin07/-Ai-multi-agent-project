@@ -11,9 +11,8 @@ import os
 from pathlib import Path
 
 # Import our existing services
-from services.enhanced_crew_manager import EnhancedTravelCrewManager
-from services.llm_natural_processor import NaturalLanguageTravelProcessor
-from agents.agents import create_agents
+from services.working_crew_manager import WorkingCrewManager
+from services.autonomous_booking_agent import AutonomousBookingAgent
 from utils.logger import logger
 
 app = FastAPI(title="TRAVA AI - Professional Travel Planning System", version="2.0")
@@ -28,9 +27,9 @@ static_dir.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-# Initialize enhanced services
-crew_manager = EnhancedTravelCrewManager()
-natural_processor = NaturalLanguageTravelProcessor()
+# Initialize services
+crew_manager = WorkingCrewManager()
+booking_agent = AutonomousBookingAgent()
 
 class NaturalLanguageRequest(BaseModel):
     travel_plan: str
@@ -53,46 +52,14 @@ async def home(request: Request):
 
 @app.post("/process-natural-language")
 async def process_natural_language(request_data: NaturalLanguageRequest):
-    """Process natural language travel request through complete AI pipeline"""
+    """Process natural language travel request"""
     try:
         logger.info(f"Processing natural language request: {request_data.travel_plan[:100]}...")
         
-        # Process through the complete AI pipeline
-        result = natural_processor.process_travel_request(request_data.travel_plan)
+        # Use the working crew manager
+        result = crew_manager.run_travel_planning(request_data.travel_plan)
         
-        if result["success"]:
-            # Generate the actual travel plan using extracted data
-            extracted_data = result["extracted_data"]
-            
-            # Convert to format expected by crew manager
-            crew_inputs = {
-                "destination": extracted_data.get("destination", "Not specified"),
-                "budget": extracted_data.get("budget", "Not specified"),
-                "duration": extracted_data.get("duration", "Not specified"),
-                "preferences": ", ".join(extracted_data.get("preferences", []))
-            }
-            
-            # Generate comprehensive travel plan
-            travel_plan_result = crew_manager.run_crew(crew_inputs)
-            
-            # Combine AI analysis with actual travel plan
-            final_result = {
-                "ai_processing": result,
-                "travel_plan": travel_plan_result,
-                "extracted_data": extracted_data,
-                "processing_summary": {
-                    "intent": result["processing_pipeline"]["step_1_intent"]["primary_intent"],
-                    "confidence": result["processing_pipeline"]["step_1_intent"]["confidence"],
-                    "tools_used": result["tool_decisions"]["tools_required"],
-                    "apis_used": result["tool_decisions"]["apis_required"],
-                    "agents_assigned": [task["agent"] for task in result["task_split"]["tasks"]],
-                    "estimated_time": result["task_split"]["total_estimated_time"]
-                }
-            }
-            
-            return {"success": True, "data": final_result}
-        else:
-            return {"success": False, "error": result.get("error", "Natural language processing failed")}
+        return {"success": True, "data": result}
         
     except Exception as e:
         logger.error(f"Error processing natural language request: {e}")
@@ -102,38 +69,10 @@ async def process_natural_language(request_data: NaturalLanguageRequest):
 async def analyze_request(request_data: AnalysisRequest):
     """Analyze user request and determine which tools/APIs are needed"""
     try:
-        # Use the natural language processor for better analysis
-        result = natural_processor.process_travel_request(request_data.user_input)
+        # Use the autonomous booking agent for analysis
+        result = booking_agent.process_travel_request(request_data.user_input)
         
-        if result["success"]:
-            return {"success": True, "analysis": {
-                "intent": result["processing_pipeline"]["step_1_intent"]["primary_intent"],
-                "confidence": result["processing_pipeline"]["step_1_intent"]["confidence"],
-                "required_tools": result["tool_decisions"]["tools_required"],
-                "required_apis": result["tool_decisions"]["apis_required"],
-                "agent_assignments": [
-                    {
-                        "agent": task["agent"],
-                        "task": task["task"]
-                    } for task in result["task_split"]["tasks"]
-                ],
-                "processing_steps": [
-                    {
-                        "step": i + 1,
-                        "action": step,
-                        "status": "pending"
-                    } for i, step in enumerate([
-                        "Understanding user intent",
-                        "Extracting travel data",
-                        "Determining required tools",
-                        "Splitting tasks among agents",
-                        "Executing multi-agent coordination",
-                        "Generating final travel plan"
-                    ])
-                ]
-            }}
-        else:
-            return {"success": False, "error": result.get("error", "Analysis failed")}
+        return {"success": True, "analysis": result}
         
     except Exception as e:
         logger.error(f"Error analyzing request: {e}")
@@ -153,22 +92,10 @@ async def generate_travel_plan(request_data: TravelRequest):
         
         logger.info(f"Generating travel plan for: {inputs}")
         
-        # Execute the multi-agent crew
-        result = crew_manager.run_crew(inputs)
+        # Execute the crew manager
+        result = crew_manager.run_travel_planning(f"Plan a trip to {request_data.destination} with budget {request_data.budget} for {request_data.duration}")
         
-        # Enhance result with execution metadata
-        enhanced_result = {
-            **result,
-            "execution_metadata": {
-                "agents_used": ["travel_researcher", "local_vibe_expert", "logic_auditor", "trip_manager"],
-                "tools_used": ["flight_search_api", "hotel_search_api", "weather_api", "general_search_api"],
-                "apis_called": ["Amadeus/Sabre GDS", "Booking.com", "OpenWeatherMap", "Google Places"],
-                "processing_time": "2.5 seconds",
-                "data_sources": ["Real-time flight data", "Live hotel availability", "Current weather", "Local attractions database"]
-            }
-        }
-        
-        return {"success": True, "data": enhanced_result}
+        return {"success": True, "data": result}
         
     except Exception as e:
         logger.error(f"Error generating travel plan: {e}")
